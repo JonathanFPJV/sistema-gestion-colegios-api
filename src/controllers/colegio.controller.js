@@ -17,7 +17,20 @@ const processColegioFiles = async (files) => {
 
 const getAllColegios = async (req, res) => {
     try {
-        const colegios = await ColegioService.getAllColegios();
+        let colegios;
+        // Si el usuario es Administrador Colegio y su JWT tiene colegioId,
+        // solo le devolvemos el colegio al que está asociado.
+        if (req.user.role === 'Administrador Colegio' && req.user.colegioId) {
+            const colegioAdministrado = await ColegioService.getColegioById(req.user.colegioId);
+            if (colegioAdministrado) {
+                colegios = [colegioAdministrado]; // Devuelve un array con solo ese colegio
+            } else {
+                colegios = []; // Si por alguna razón el colegio no se encuentra, devuelve vacío
+            }
+        } else {
+            // Si es Administrador Global, devuelve todos los colegios.
+            colegios = await ColegioService.getAllColegios();
+        }
         res.status(200).json(colegios);
     } catch (error) {
         res.status(500).json({ message: error.message });

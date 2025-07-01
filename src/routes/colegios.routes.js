@@ -25,7 +25,7 @@ const prepareColegioIdParam = (req, res, next) => {
 router.get(
     '/',
     authenticateToken,
-    authorizeRoles('Administrador Global'),
+    authorizeRoles('Administrador Global', 'Administrador Colegio'),
     colegioController.getAllColegios
 );
 
