@@ -12,6 +12,14 @@ const colegioFileUpload = upload.fields([
     { name: 'url_documento_licencia', maxCount: 1 }
 ]);
 
+const prepareColegioIdParam = (req, res, next) => {
+    // Para rutas como /colegios/:id, el ID del colegio ya está en req.params.id
+    if (req.params.id) {
+        req.params.id_colegio_param = parseInt(req.params.id); // Asigna el ID del colegio al param esperado
+    }
+    next();
+};
+
 // Obtener todos los colegios
 // Solo Administradores Globales pueden ver todos los colegios.
 router.get(
@@ -28,6 +36,7 @@ router.get(
     '/:id',
     authenticateToken,
     authorizeRoles('Administrador Global', 'Administrador Colegio'),
+    prepareColegioIdParam,
     authorizeColegio, // Este middleware debe verificar si req.user.colegioId coincide con req.params.id
     colegioController.getColegioById
 );
@@ -49,6 +58,7 @@ router.put(
     '/:id',
     authenticateToken,
     authorizeRoles('Administrador Global', 'Administrador Colegio'),
+    prepareColegioIdParam,
     authorizeColegio, // Este middleware debe verificar si req.user.colegioId coincide con req.params.id
     colegioFileUpload, // Aplica el middleware de Multer aquí
     colegioController.updateColegio
@@ -60,6 +70,8 @@ router.delete(
     '/:id',
     authenticateToken,
     authorizeRoles('Administrador Global'),
+    prepareColegioIdParam, // ¡AÑADIR ESTE HELPER AQUÍ!
+    authorizeColegio,
     colegioController.deleteColegio
 );
 

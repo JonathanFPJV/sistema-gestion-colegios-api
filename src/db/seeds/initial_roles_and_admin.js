@@ -87,7 +87,8 @@ exports.seed = async function(knex) {
     id_rol: 2, // Rol de Administrador Colegio
     usuario: 'admin.innova',
     contrasena: hashedPasswordColegio,
-    especialidad: null
+    especialidad: null,
+    id_colegio_gestion: colegioId
   });
 
   // Nota: Para asociar un 'Administrador Colegio' a un colegio específico para la autorización,

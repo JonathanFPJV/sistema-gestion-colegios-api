@@ -117,6 +117,8 @@ exports.up = async function(knex) {
     table.string('usuario', 50).notNullable().unique();
     table.string('contrasena', 255).notNullable(); // Hashed password
     table.string('especialidad', 100).nullable(); // Solo para rol 'Docente', será NULL para otros
+    table.integer('id_colegio_gestion').unsigned().nullable(); // FK a Colegios, NULL para Admin Global o si no gestiona colegio
+    table.foreign('id_colegio_gestion').references('id_colegio').inTable('Colegios').onDelete('SET NULL');
     table.foreign('id_persona').references('id_persona').inTable('Personas').onDelete('CASCADE');
     table.foreign('id_rol').references('id_rol').inTable('Roles').onDelete('RESTRICT');
   });
@@ -226,6 +228,10 @@ exports.up = async function(knex) {
  */
 exports.down = async function(knex) {
   // Las tablas deben eliminarse en el orden inverso a su creación debido a las FKs
+  // Eliminar FKs primero para evitar errores de dependencia
+  await knex.schema.table('Usuarios', function(table) {
+    table.dropForeign('id_colegio_gestion'); // Elimina la clave foránea
+  });
   await knex.schema.dropTableIfExists('Asistencias');
   await knex.schema.dropTableIfExists('Notas');
   await knex.schema.dropTableIfExists('Matricula');

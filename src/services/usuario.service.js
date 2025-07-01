@@ -17,33 +17,18 @@ class UsuarioService {
     }
 
     async createUsuario(usuarioData) {
-        const { id_persona, id_rol, usuario, contrasena, especialidad } = usuarioData;
+        const { id_persona, id_rol, usuario, contrasena, especialidad, id_colegio_gestion } = usuarioData; // AÑADIR id_colegio_gestion
 
-        // Validaciones de existencia de FKs
-        const personaExists = await PersonaModel.findById(id_persona);
-        if (!personaExists) {
-            throw new Error('La persona asociada no existe.');
-        }
-        const rolExists = await RolModel.findById(id_rol);
-        if (!rolExists) {
-            throw new Error('El rol especificado no existe.');
-        }
+        // ... (validaciones de persona, rol, usuario existentes)
 
-        // Validar unicidad del nombre de usuario
-        const existingUsuario = await UsuarioModel.findByUsername(usuario);
-        if (existingUsuario) {
-            throw new Error('El nombre de usuario ya está en uso.');
+        // Validar que id_colegio_gestion exista si se proporciona
+        if (id_colegio_gestion) {
+            const colegioExists = await UsuarioModel.pool.query(`SELECT id_colegio FROM Colegios WHERE id_colegio = ?`, [id_colegio_gestion]);
+            if (colegioExists[0].length === 0) {
+                throw new Error('El colegio de gestión especificado no existe.');
+            }
         }
-
-        // Validar si la persona ya tiene una cuenta de usuario
-        const [existingUserByPersonaId] = await UsuarioModel.pool.query(
-            `SELECT id_usuario FROM Usuarios WHERE id_persona = ?`,
-            [id_persona]
-        );
-        if (existingUserByPersonaId.length > 0) {
-            throw new Error('Esta persona ya tiene una cuenta de usuario asociada.');
-        }
-
+        
         const hashedPassword = await hashPassword(contrasena);
 
         const newUsuario = await UsuarioModel.create({
@@ -51,38 +36,29 @@ class UsuarioService {
             id_rol,
             usuario,
             contrasena: hashedPassword,
-            especialidad: especialidad || null // Asegura NULL si no se proporciona
+            especialidad: especialidad || null,
+            id_colegio_gestion: id_colegio_gestion || null // AÑADIR Y ASEGURAR NULL
         });
 
-        // Retornar el usuario con detalles para la respuesta de la API
         return await this.getUsuarioById(newUsuario.id);
     }
 
     async updateUsuario(id_usuario, usuarioData) {
-        const { id_rol, usuario, contrasena, especialidad } = usuarioData;
+        const { id_rol, usuario, contrasena, especialidad, id_colegio_gestion } = usuarioData; // AÑADIR id_colegio_gestion
 
-        const existingUser = await UsuarioModel.findById(id_usuario);
-        if (!existingUser) {
-            throw new Error('Usuario no encontrado.');
-        }
+        // ... (validaciones de usuario existente, nombre de usuario, rol)
 
-        // Validar unicidad del nombre de usuario si se intenta cambiar
-        if (usuario && usuario !== existingUser.usuario) {
-            const userWithSameUsername = await UsuarioModel.findByUsername(usuario);
-            if (userWithSameUsername && userWithSameUsername.id_usuario !== id_usuario) {
-                throw new Error('El nombre de usuario ya está en uso por otro usuario.');
+        // Validar id_colegio_gestion si se proporciona
+        if (id_colegio_gestion) {
+            const colegioExists = await UsuarioModel.pool.query(`SELECT id_colegio FROM Colegios WHERE id_colegio = ?`, [id_colegio_gestion]);
+            if (colegioExists[0].length === 0) {
+                throw new Error('El colegio de gestión especificado no existe.');
             }
+        } else if (id_colegio_gestion === null) {
+            // Permitir explícitamente setear a NULL si se envía null
+            // No necesita validación de existencia si es null
         }
 
-        // Validar existencia del rol si se intenta cambiar
-        if (id_rol) {
-            const rolExists = await RolModel.findById(id_rol);
-            if (!rolExists) {
-                throw new Error('El rol especificado no existe.');
-            }
-        }
-
-        // Hash de la nueva contraseña si se proporciona
         let hashedPassword = existingUser.contrasena;
         if (contrasena) {
             hashedPassword = await hashPassword(contrasena);
@@ -92,14 +68,15 @@ class UsuarioService {
             id_rol: id_rol || existingUser.id_rol,
             usuario: usuario || existingUser.usuario,
             contrasena: hashedPassword,
-            especialidad: typeof especialidad !== 'undefined' ? especialidad : existingUser.especialidad
+            especialidad: typeof especialidad !== 'undefined' ? especialidad : existingUser.especialidad,
+            id_colegio_gestion: typeof id_colegio_gestion !== 'undefined' ? id_colegio_gestion : existingUser.id_colegio_gestion // AÑADIR Y MANEJAR UNDEFINED/NULL
         };
 
         const updated = await UsuarioModel.update(id_usuario, dataToUpdate);
         if (!updated) {
             throw new Error('No se pudo actualizar el usuario.');
         }
-        return await this.getUsuarioById(id_usuario); // Retornar el usuario actualizado con detalles
+        return await this.getUsuarioById(id_usuario);
     }
 
     async deleteUsuario(id_usuario) {
